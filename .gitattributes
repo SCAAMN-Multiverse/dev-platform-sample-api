@@ -1,0 +1,19 @@
+# Finales de línea forzados a LF, sin depender de la configuración de cada
+# máquina.
+#
+# Por qué importa: con `core.autocrlf=true` (el default de Git en Windows) los
+# scripts se registran con CRLF y, al clonarlos, bash falla con
+# «$'\r': command not found» — un error que no menciona los finales de línea y
+# que se persigue durante un buen rato. Los YAML de Kubernetes y el fichero de
+# configuración del cluster viajan también a contenedores Linux.
+* text=auto eol=lf
+
+*.sh   text eol=lf
+*.yaml text eol=lf
+*.yml  text eol=lf
+*.env  text eol=lf
+*.md   text eol=lf
+
+*.png binary
+*.jpg binary
+*.gz  binary

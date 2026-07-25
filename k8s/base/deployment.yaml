@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sample-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sample-api
+    spec:
+      containers:
+        - name: app
+          # Tag siempre inmutable (git sha). Lo reescribe Skaffold en `local`
+          # y CI en pre/pro. Ver PLATFORM.md §2.
+          image: registry.localtest.me:5111/sample-api:REPLACED_BY_BUILD
+          ports:
+            - name: http
+              containerPort: 3000
+            # Inspector de Node. NO se expone por Service ni por Ingress: se
+            # alcanza solo por `kubectl port-forward` (PLATFORM.md §9).
+            - name: debug
+              containerPort: 9229
+          env:
+            - name: PORT
+              value: "3000"
+            - name: APP_ENV
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          envFrom:
+            - configMapRef:
+                name: sample-api-config
+          # /health no debe tocar dependencias externas: lo usan readiness y
+          # liveness a la vez (PLATFORM.md §4).
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 384Mi

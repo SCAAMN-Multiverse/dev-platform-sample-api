@@ -1,0 +1,18 @@
+# Presupuesto de `local`: dentro corre `nest start --watch`, que mantiene
+# el compilador de TypeScript vivo. Con un limit apretado el pod muere por OOM
+# a mitad de recompilar y parece un fallo de la herramienta de sync.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-api
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              memory: 1536Mi

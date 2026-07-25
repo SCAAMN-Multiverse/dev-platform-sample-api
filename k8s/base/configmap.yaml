@@ -1,0 +1,9 @@
+# Configuración NO secreta consumida por el proceso vía envFrom
+# (PLATFORM.md §5). Los secretos NO van aquí.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sample-api-config
+data:
+  APP_NAME: sample-api
+  LOG_LEVEL: debug

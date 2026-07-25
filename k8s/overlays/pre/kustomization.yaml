@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: pre
+
+resources:
+  - ../../base
+
+images:
+  - name: registry.localtest.me:5111/sample-api
+    newTag: REPLACED_BY_CI
+
+patches:
+  - path: ingress-host.yaml
+  - path: resources.yaml
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/instance: sample-api-pre

@@ -1,0 +1,87 @@
+# ---------------------------------------------------------------------------
+# Skaffold — el bucle rápido (inner loop) de `ns local`. Contrato: PLATFORM.md §15.
+#
+# Dos velocidades: ITERAR código son segundos y lo gobierna este fichero;
+# VALIDAR el empaquetado son minutos y lo gobierna GitOps sobre `pre`/`pro`.
+# `local` es territorio exclusivo de Skaffold: ArgoCD no lo toca (PLATFORM.md §11).
+#
+# Arranque:   skaffold dev            (Ctrl-C para parar; borra lo desplegado)
+# Una vez:    skaffold run
+# Limpiar:    skaffold delete
+# ---------------------------------------------------------------------------
+apiVersion: skaffold/v4beta13
+kind: Config
+metadata:
+  name: sample-api
+
+build:
+  # El registry local habla HTTP plano. El demonio de Docker ya lo sabe (lo
+  # configura el bootstrap), pero Skaffold usa su PROPIO cliente de registry
+  # para resolver el digest tras el push y no hereda esa configuracion.
+  # Sin esta lista, el build TERMINA BIEN, la imagen SE PUBLICA, y justo
+  # despues falla con
+  #   http: server gave HTTP response to HTTPS client
+  # que se lee como un fallo de push cuando el push ya habia ocurrido.
+  insecureRegistries:
+    - registry.localtest.me:5111
+  local:
+    # Obligatorio: el containerd de k3d no ve el demonio de Docker del host.
+    push: true
+    useBuildkit: true
+    concurrency: 1
+
+  # Ver la nota equivalente en templates/angular-app/skaffold.yaml.
+  tagPolicy:
+    inputDigest: {}
+
+  artifacts:
+    - image: registry.localtest.me:5111/sample-api
+      context: .
+      docker:
+        dockerfile: Dockerfile
+        # `dev` = `nest start --debug 0.0.0.0:9229 --watch`. Sin esta etapa el
+        # contenedor correría `node dist/main` y sincronizar un .ts no haría
+        # nada (PLATFORM.md §6).
+        target: dev
+
+      sync:
+        manual:
+          - src: src/**/*
+            dest: /app
+          - src: nest-cli.json
+            dest: /app
+          - src: tsconfig*.json
+            dest: /app
+      # NO se sincroniza, a propósito:
+      #   - node_modules -> vive en la imagen (binarios nativos de la plataforma
+      #     del contenedor, no de Windows).
+      #   - dist/ -> lo genera el watcher dentro del pod.
+      #   - package.json / package-lock.json -> NO sincronizables A PROPÓSITO:
+      #     tocarlos dispara reconstrucción (npm ci). Sincronizarlos dejaría el
+      #     pod declarando dependencias que nadie ha instalado.
+
+manifests:
+  kustomize:
+    paths:
+      - k8s/overlays/local
+
+deploy:
+  kubectl: {}
+  statusCheckDeadlineSeconds: 600
+
+# Rango 19030-19039 reservado en PORTS.md.
+#   base+0 = HTTP  · base+1 = depurador
+# El 9229 no se publica por Service ni por Ingress (un inspector abierto es
+# ejecución remota de código): sólo por este forward explícito. En el IDE:
+# attach a localhost:19011.
+portForward:
+  - resourceType: service
+    resourceName: sample-api
+    namespace: local
+    port: 80
+    localPort: 19030
+  - resourceType: deployment
+    resourceName: sample-api
+    namespace: local
+    port: 9229
+    localPort: 19031
