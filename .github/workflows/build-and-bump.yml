@@ -106,9 +106,12 @@ jobs:
           # etapa `dev` es exclusiva del inner loop (PLATFORM.md §6).
           docker build --target prod -t "$REF" .
           docker push "$REF"
-          # UN TAG, UN CONTENIDO: si el tag ya existiera con otro digest,
-          # alguien ha reescrito historia. Se comprueba, no se supone.
-          docker manifest inspect "$REF" >/dev/null
+          # UN TAG, UN CONTENIDO: se comprueba contra el registry que el tag
+          # existe de verdad tras el push. NO se usa `docker manifest inspect`:
+          # habla HTTPS y este registry es HTTP plano, asi que fallaria con
+          # "server gave HTTP response to HTTPS client" DESPUES de un push
+          # correcto — el mismo sintoma enganoso que dio Skaffold en la Fase 3.
+          curl -sf "http://$REGISTRY/v2/$APP/manifests/${{ steps.tag.outputs.sha }}"             -H 'Accept: application/vnd.docker.distribution.manifest.v2+json'             -H 'Accept: application/vnd.oci.image.manifest.v1+json' >/dev/null
 
       - name: Escribir el tag en el overlay del entorno
         shell: bash
