@@ -3,6 +3,6 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class AppService {
   getHello(): string {
-    return 'sample-api gate-fase6';
+    return 'sample-api runner-org-1';
   }
 }
