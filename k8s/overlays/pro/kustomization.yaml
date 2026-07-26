@@ -7,7 +7,7 @@ resources:
 
 images:
   - name: registry.localtest.me:5111/sample-api
-    newTag: 2f56828891a4
+    newTag: 27222a5a63bf
 
 patches:
   - path: ingress-host.yaml
